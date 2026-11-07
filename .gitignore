@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Herdr generates these when validating a mod.
+mods/*/jsconfig.json
+mods/*/*.d.ts
+mods/*/*.error
