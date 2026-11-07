@@ -27,6 +27,12 @@ active provider backoff. The panel's countdown ticks every 30 seconds
 without a network call. Escape and × close it. Errors leave usable earlier
 data visible. Missing provider windows are not synthesized.
 
+When lazyagent is missing, the panel explains the dependency and offers
+**Installation instructions on GitHub**. The button opens
+`https://github.com/illegalstudio/lazyagent#install` in the browser, using
+`open` on macOS or `xdg-open` on Linux. After installing the command on PATH,
+Refresh checks again. A browser-launch failure shows the URL in a notification.
+
 Agent working, blocked, idle and done states do not affect quota readings;
 these are account usage windows, not per-terminal budgets. Remote space
 selection does not change the local query machine. The preview uses

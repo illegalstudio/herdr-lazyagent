@@ -1,9 +1,10 @@
 import { View, div } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { exec, appHome, props, shared, setShared, openOverlay, closeOverlay, theme, nextCommand } from "herdr";
+import { exec, appHome, props, shared, setShared, openOverlay, closeOverlay, theme, nextCommand, window, notify } from "herdr";
 
 const KEY = "herdr-lazyagent.snapshot";
 const BUSY = "herdr-lazyagent.busy";
+const INSTALL_URL = "https://github.com/illegalstudio/lazyagent#install";
 const percent = n => `${Math.round(Number(n) || 0)}%`;
 const clamp = n => Math.max(0, Math.min(100, Number(n) || 0));
 function duration(seconds) {
@@ -64,6 +65,17 @@ export default class Limits extends View {
     openOverlay({ mod: "herdr-lazyagent", kind: "dialog", width: 560, height: 610, props: { role: "panel" } });
   }
 
+  installInstructions(cx) {
+    cx.spawn(async () => {
+      try {
+        const result = await exec(window()?.platform === "macos" ? "open" : "xdg-open", [INSTALL_URL]);
+        if (result.code !== 0) throw new Error("Could not open the browser");
+      } catch (_error) {
+        notify({ title: "Open the installation guide", body: INSTALL_URL, level: "error" });
+      }
+    });
+  }
+
   compact(data, busy, t) {
     const reports = data?.reports || [];
     const windows = reports.flatMap(r => r.windows || []);
@@ -113,7 +125,14 @@ export default class Limits extends View {
         .child(button("limits-close", "×", () => closeOverlay(props().overlay))))
       .when(until > this.now, el => el.child(div().text_size(11).text_color(t.ansi3).child(`Provider rate limit · retry in ${duration((until - this.now) / 1000)}`)))
       .child(v_flex().id("limits-scroll").flex_1().min_h(0).overflow_y_scrollbar().gap(10).text_size(12)
-        .when(!reports.length, el => el.child(div().py(30).text_color(t.muted).child(busy ? "Reading your agent limits…" : data?.installed === false ? "lazyagent was not found on this computer." : "No usage windows available. Sign in to an agent, then refresh.")))
+        .when(!reports.length, el => el.child(!busy && data?.installed === false
+          ? v_flex().py(24).gap(12)
+            .child(div().font_semibold().text_size(14).child("lazyagent was not found on this computer."))
+            .child(div().text_color(t.muted).child("Install lazyagent to read your agent limits."))
+            .child(div().text_color(t.muted).child("Follow the GitHub guide for your operating system."))
+            .child(h_flex().child(button("limits-install", "Installation instructions on GitHub ↗", (_e, cx) => this.installInstructions(cx))))
+            .child(div().text_size(11).text_color(t.dim).child("Make sure lazyagent is on your PATH, then click Refresh."))
+          : div().py(30).text_color(t.muted).child(busy ? "Reading your agent limits…" : "No usage windows available. Sign in to an agent, then refresh.")))
         .children(reports.map((r, i) => v_flex().id(`limit-report-${i}`).p(14).gap(2).rounded(9).border_1().border_color(t.border).bg(t.surface)
           .child(h_flex().items_center().justify_between()
             .child(div().font_semibold().text_size(13).child(r.provider || r.short_name || r.agent))

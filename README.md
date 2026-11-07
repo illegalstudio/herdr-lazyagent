@@ -124,6 +124,11 @@ herdr-app do herdr-lazyagent.open
 - Reset countdowns update locally every 30 seconds. Scroll to see more providers.
 - Close with **×** or **Escape**.
 
+If lazyagent is not found, the panel explains the requirement and provides
+an **Installation instructions on GitHub** button. It opens lazyagent's
+installation guide in your browser. Install the command so it is available
+on your `PATH`, then click **Refresh**; no Herdr restart is needed.
+
 The numbers belong to the computer running the Herdr app. Selecting a
 remote Herdr space does not switch the query machine. Missing windows stay
 absent; the mod does not estimate limits the provider did not return.
