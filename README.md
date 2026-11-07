@@ -1,13 +1,42 @@
-# Herdr Lazyagent
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/icon-transparent-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/icon-transparent-light.png">
+    <img src="assets/icon-transparent-light.png" alt="Herdr Lazyagent logo" width="130">
+  </picture>
+</p>
 
-Your coding agent rate limits, inside [Herdr](https://herdr.dev).
+<h1 align="center">Herdr Lazyagent</h1>
 
-A native Herdr mod powered by [lazyagent](https://github.com/illegalstudio/lazyagent).
-The compact **Limits** indicator shows the most consumed window. Click it to
-open a panel with usage bars, expected-usage markers, pace and reset countdowns
-for Claude Code, Codex, Grok, Kimi Code and Cursor, when available.
+<p align="center">
+  <em>Your coding agent rate limits, inside Herdr.</em>
+</p>
 
-![Herdr Lazyagent panel](preview.png)
+<p align="center">
+  <a href="https://github.com/illegalstudio/herdr-lazyagent/stargazers"><img src="https://img.shields.io/github/stars/illegalstudio/herdr-lazyagent?style=flat-square&amp;logo=github&amp;logoColor=white&amp;label=stars&amp;color=6396CF" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/illegalstudio/herdr-lazyagent?style=flat-square&amp;color=6396CF" alt="License: MIT"></a>
+  <a href="https://herdr.dev"><img src="https://img.shields.io/badge/Herdr-native%20mod-6396CF?style=flat-square" alt="Herdr native mod"></a>
+  <a href="https://github.com/illegalstudio/lazyagent"><img src="https://img.shields.io/badge/powered%20by-lazyagent-6396CF?style=flat-square" alt="Powered by lazyagent"></a>
+</p>
+
+<p align="center">
+  <strong>Usage vs expected &middot; Pace indicators &middot; Reset countdowns &middot; Native Herdr UI</strong>
+</p>
+
+<p align="center">
+  A native <a href="https://herdr.dev">Herdr</a> mod powered by <a href="https://github.com/illegalstudio/lazyagent">lazyagent</a>.
+  Keep the most consumed window in your status bar, then open the panel for usage, pace and resets across Claude Code, Codex, Grok, Kimi Code and Cursor, when available.
+</p>
+
+<p align="center">
+  <a href="https://illegal.studio/en/products/herdr-lazyagent"><strong>Official Website</strong></a>
+</p>
+
+---
+
+<p align="center">
+  <img src="preview.png" alt="Herdr Lazyagent panel with illustrative usage data" width="560">
+</p>
 
 ## Requirements
 
