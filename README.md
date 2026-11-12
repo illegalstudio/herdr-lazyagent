@@ -189,6 +189,26 @@ After changing the UI, also try it in Herdr: the check command covers only
 the initial render, not later async data or the opened dialog. See
 [RECIPE.md](RECIPE.md) for composition and acceptance checks.
 
+## Release
+
+From a clean `main` branch that has been pushed to `origin`, run:
+
+```sh
+make release
+```
+
+Like the other studio tools, the command fetches tags, proposes the next patch
+version (starting at `v0.1.0`), and accepts a custom `vMAJOR.MINOR.PATCH` version
+with or without the `v`. After confirmation it creates an annotated tag at the
+displayed commit and pushes the tag to `origin`.
+
+The GitHub **Release** workflow runs the Python and JavaScript tests, packages
+the mod as `.zip` and `.tar.gz`, and publishes those archives with SHA-256
+checksums and generated release notes. Archives contain the `mods/` folder,
+installation docs, recipe, preview and license from the tagged commit.
+Generated Herdr files and local state stay out of the archives.
+You can follow the release workflow with `gh run list --workflow release.yml`.
+
 ## Remove
 
 Remove the `herdr-lazyagent` block from your personal layout, then remove
