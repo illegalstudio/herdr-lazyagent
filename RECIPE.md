@@ -16,6 +16,11 @@ The 560 by 610 panel has a heading, local machine label, age, **Refresh**
 and **×**. Provider cards show the name, window label, used percentage,
 horizontal usage bar and expected-usage marker. Each bar has a reset
 countdown and pace label underneath. Cards scroll above a short footer.
+Model and feature windows include their scope in the bar label, such as
+**7-day · Fable**. A **More** control below each card's bars expands banked
+limit resets (count, status, expiry and next availability), credits and extra
+usage, window context and absolute reset times, source and notes. **Less**
+collapses the details; cards expand independently.
 High usage, over-pace consumption, stale reports and provider errors are
 highlighted using theme colors.
 
@@ -26,6 +31,8 @@ same cache age. Refresh requests a fresh report but does not bypass an
 active provider backoff. The panel's countdown ticks every 30 seconds
 without a network call. Escape and × close it. Errors leave usable earlier
 data visible. Missing provider windows are not synthesized.
+Expanded reset and expiry countdowns tick on the same local timer. Credit
+balances and extra spend use the units and text reported by lazyagent.
 
 When lazyagent is missing, the panel explains the dependency and offers
 **Installation instructions on GitHub**. The button opens
@@ -54,7 +61,10 @@ illustrative data rather than a personal account snapshot.
   state under `XDG_STATE_HOME` or `~/.local/state`.
 - `bridge.py` is the attributed MIT bridge from omarchy-lazyagent. It
   sanitizes the report, caches snapshots, tracks backoff and retains stale
-  per-provider data. No Omarchy installation or HTTP server is required.
+  per-provider data, extended to preserve scoped windows, resets and credits.
+  No Omarchy installation or HTTP server is required.
+- `details.js` formats scoped bar labels and live countdowns. Absolute
+  provider timestamps take precedence over cached relative durations.
 
 Before installing, disclose that this mod runs Python and lazyagent, reads
 local usage caches, writes its own cache, and accesses provider usage
@@ -83,6 +93,9 @@ providers supported by lazyagent; it has no settings panel or remote mode.
 - Clicking it opens the scrollable centered panel with real available data.
 - Used bars and expected markers stay inside their tracks; reset labels
   count down, and unavailable windows remain absent.
+- Fable and other scoped windows have distinct labeled bars. More and Less
+  expand and collapse only their own provider card; reset grants, credits
+  and metadata remain available after cache reuse or a provider failure.
 - Refresh, Escape and × work, and `herdr-app status` reports no mod errors.
 - A failed provider is shown with its error and any cached report marked stale.
 - Provider backoff is retained, optional Omarchy state stays unchanged,

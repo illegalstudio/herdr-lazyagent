@@ -31,7 +31,9 @@ def load_best():
     candidates = [s for s in candidates if s.get("agent") == "all"]
     if not candidates:
         return {}
-    latest = dict(max(candidates, key=lambda s: s.get("fetchedAt", 0)))
+    # Older frontends strip scopes and extras before writing their snapshots.
+    # Keep a complete report instead of replacing it with a newer lossy cache.
+    latest = dict(max(candidates, key=lambda s: (s.get("hasDetails", False), s.get("fetchedAt", 0))))
     latest["backoff"] = max(
         (s.get("backoff", bridge.sanitize_backoff(None)) for s in candidates),
         key=lambda b: b.get("until", 0),

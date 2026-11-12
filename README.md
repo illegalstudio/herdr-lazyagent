@@ -44,6 +44,7 @@
   a plugin for the legacy Herdr TUI.
 - [lazyagent](https://github.com/illegalstudio/lazyagent#install) **0.15 or newer**,
   installed separately and available on `PATH` or in a standard binary location.
+  Use **0.16 or newer** for model and feature labels, banked resets and credits.
 - Python **3.10 or newer**, with no additional packages.
 - Linux or macOS, with the providers you want to monitor already signed in.
 
@@ -120,8 +121,14 @@ herdr-app do herdr-lazyagent.open
 - Click **Limits** in the status bar to open the centered panel.
 - Each available provider window shows its used percentage and a marker for
   expected usage at a linear pace. The label says under, on or over pace.
+- Model and feature windows, such as **Fable** and **Code review**, have their
+  own labeled bars when the provider exposes them.
+- Click **More** below a provider's bars to expand its banked limit resets,
+  expiry and next availability, credits and extra usage, window details,
+  source and notes. **Less** collapses that card. Each card opens independently.
 - **Refresh** requests new data, while respecting provider backoff.
-- Reset countdowns update locally every 30 seconds. Scroll to see more providers.
+- Reset and expiry countdowns update locally every 30 seconds. Scroll to see
+  more providers and expanded details.
 - Close with **×** or **Escape**.
 
 If lazyagent is not found, the panel explains the requirement and provides
@@ -140,6 +147,12 @@ up to five minutes old. The adapter reads an existing
 [omarchy-lazyagent](https://github.com/illegalstudio/omarchy-lazyagent) cache
 when available, so the two frontends can reuse recent snapshots. Omarchy is
 optional and its state is never modified.
+Snapshots written by an older frontend may lack the new detail fields until
+the next successful provider refresh. **Refresh** requests them immediately
+when no provider backoff is active.
+Once a complete snapshot is available, it takes precedence over older-format
+snapshots that discarded scopes, resets or credits, even if those snapshots
+were written more recently. Backoff from either cache remains in effect.
 
 Provider rate limits trigger exponential backoff, starting at two minutes
 and capped at 30 minutes. Last successful provider reports remain visible
@@ -169,6 +182,7 @@ uses the standard library and an MIT bridge from omarchy-lazyagent.
 ```sh
 herdr-app check mods/herdr-lazyagent
 python3 -B -m unittest discover -s tests -v
+node --test tests/test_details.mjs
 ```
 
 After changing the UI, also try it in Herdr: the check command covers only
@@ -185,4 +199,5 @@ Removing this mod does not uninstall lazyagent or change provider logins.
 
 [MIT](LICENSE). The vendored bridge comes from
 [omarchy-lazyagent](https://github.com/illegalstudio/omarchy-lazyagent/blob/main/scripts/lazyagent_bridge.py),
-blob `0c1fa2f46cd8592807ef6cd251d4ac3e41288ac9`, copyright 2026 illegalstudio.
+blob `0c1fa2f46cd8592807ef6cd251d4ac3e41288ac9`, copyright 2026 illegalstudio,
+with local extensions for scoped windows, resets and credits.

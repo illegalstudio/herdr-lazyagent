@@ -1,18 +1,13 @@
 import { View, div } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { exec, appHome, props, shared, setShared, openOverlay, closeOverlay, theme, nextCommand, window, notify } from "herdr";
+import { duration, windowTitle, remainingSeconds, absoluteTime, resetLines } from "./details.js";
 
 const KEY = "herdr-lazyagent.snapshot";
 const BUSY = "herdr-lazyagent.busy";
 const INSTALL_URL = "https://github.com/illegalstudio/lazyagent#install";
 const percent = n => `${Math.round(Number(n) || 0)}%`;
 const clamp = n => Math.max(0, Math.min(100, Number(n) || 0));
-function duration(seconds) {
-  const n = Math.max(0, Math.floor(seconds || 0));
-  if (n >= 86400) return `${Math.floor(n / 86400)}d ${Math.floor(n % 86400 / 3600)}h`;
-  if (n >= 3600) return `${Math.floor(n / 3600)}h ${Math.floor(n % 3600 / 60)}m`;
-  return n >= 60 ? `${Math.floor(n / 60)}m` : `${n}s`;
-}
 function tone(window, t) {
   if (window.used_percent >= 90) return t.blocked;
   if (window.used_percent >= 75 || window.pace_label === "overutilizing") return t.ansi3;
@@ -22,6 +17,7 @@ function tone(window, t) {
 export default class Limits extends View {
   init(_props, cx) {
     this.panel = props()?.role === "panel";
+    this.expanded = new Set();
     this.now = Date.now();
     this.refresh(cx, "auto");
     if (!this.panel) {
@@ -93,11 +89,11 @@ export default class Limits extends View {
 
   window(window, report, data, t, index) {
     const fetched = Number(report.fetched_at || data.fetchedAt || 0) * 1000;
-    const remaining = Math.max(0, Number(window.reset_in_seconds || 0) - Math.max(0, this.now - fetched) / 1000);
+    const remaining = remainingSeconds(window.resets_at, window.reset_in_seconds, fetched / 1000, this.now);
     const pace = window.pace_known ? ({ underutilizing: "Under pace", "on track": "On pace", overutilizing: "Over pace" })[window.pace_label] || "" : "Pace unavailable";
     return v_flex().gap(7).pt(index ? 14 : 10)
       .child(h_flex().items_center().justify_between()
-        .child(div().text_color(t.muted).child(window.label || "Usage"))
+        .child(div().flex_1().min_w(0).text_color(t.muted).child(windowTitle(window)))
         .child(div().font_semibold().text_color(tone(window, t)).child(`${percent(window.used_percent)} used`)))
       .child(div().relative().w_full().h(6).rounded(3).bg(t.hover)
         .child(div().h(6).w(`${clamp(window.used_percent)}%`).rounded(3).bg(tone(window, t)))
@@ -105,6 +101,46 @@ export default class Limits extends View {
       .child(h_flex().items_center().justify_between().text_size(11).text_color(t.dim)
         .child(window.resets_at ? remaining > 0 ? `Reset in ${duration(remaining)}` : "Reset due" : "Reset unavailable")
         .child(`${pace}${window.pace_known ? ` · ${percent(window.expected_percent)} expected` : ""}`));
+  }
+
+  reportDetails(report, data, t) {
+    const fetched = Number(report.fetched_at || data.fetchedAt || 0);
+    const resets = report.resets || [];
+    const credits = report.credits || [];
+    const windows = (report.windows || []).filter(w => w.detail || absoluteTime(w.resets_at));
+    const item = (label, lines) => v_flex().gap(3).min_w(0)
+      .child(div().text_color(t.muted).child(label))
+      .children(lines.map(line => div().text_color(t.dim).child(line)));
+    const section = (label, items) => v_flex().gap(8)
+      .child(div().font_semibold().text_color(t.muted).child(label)).children(items);
+    return v_flex().gap(12).pt(12).border_t(1).border_color(t.border).text_size(11).whitespace_normal()
+      .when(resets.length > 0, el => el.child(section("Limit resets", resets.map(r => item(r.label, resetLines(r, fetched, this.now))))))
+      .when(credits.length > 0, el => el.child(section("Credits and extra usage", credits.map(c => item(c.label, [c.text || c.status || (c.enabled ? "Enabled" : "Disabled")])))))
+      .when(windows.length > 0, el => el.child(section("Window details", windows.map(w => item(windowTitle(w), [
+        w.detail, absoluteTime(w.resets_at) ? `Resets at ${absoluteTime(w.resets_at)}` : "",
+      ].filter(Boolean))))))
+      .when(Boolean(report.note), el => el.child(item("Note", [report.note])))
+      .when(Boolean(report.source), el => el.child(item("Source", [report.source])))
+      .when(!resets.length && !credits.length && !windows.length && !report.note && !report.source,
+        el => el.child(div().text_color(t.dim).child("No additional details available.")));
+  }
+
+  report(report, data, t, index) {
+    const key = JSON.stringify([report.agent, report.provider]);
+    const expanded = this.expanded.has(key);
+    return v_flex().id(`limit-report-${index}`).flex_shrink_0().p(14).gap(2).rounded(9).border_1().border_color(t.border).bg(t.surface)
+      .child(h_flex().items_center().justify_between()
+        .child(div().font_semibold().text_size(13).child(report.provider || report.short_name || report.agent))
+        .when(report.stale === true, el => el.child(div().text_size(10).text_color(t.ansi3).child("Stale data"))))
+      .children((report.windows || []).map((w, i) => this.window(w, report, data, t, i)))
+      .child(h_flex().pt(10).child(div().id(`limits-more-${index}`).px(8).py(4).rounded(5).text_size(11)
+        .text_color(t.muted).cursor_pointer().hover(s => s.bg(t.hover))
+        .on_click((_event, cx) => {
+          if (this.expanded.has(key)) this.expanded.delete(key);
+          else this.expanded.add(key);
+          cx.notify();
+        }).child(expanded ? "Less ▴" : "More ▾")))
+      .when(expanded, el => el.child(this.reportDetails(report, data, t)));
   }
 
   panelView(data, busy, t) {
@@ -133,11 +169,7 @@ export default class Limits extends View {
             .child(h_flex().child(button("limits-install", "Installation instructions on GitHub ↗", (_e, cx) => this.installInstructions(cx))))
             .child(div().text_size(11).text_color(t.dim).child("Make sure lazyagent is on your PATH, then click Refresh."))
           : div().py(30).text_color(t.muted).child(busy ? "Reading your agent limits…" : "No usage windows available. Sign in to an agent, then refresh.")))
-        .children(reports.map((r, i) => v_flex().id(`limit-report-${i}`).p(14).gap(2).rounded(9).border_1().border_color(t.border).bg(t.surface)
-          .child(h_flex().items_center().justify_between()
-            .child(div().font_semibold().text_size(13).child(r.provider || r.short_name || r.agent))
-            .when(r.stale === true, el => el.child(div().text_size(10).text_color(t.ansi3).child("Stale data"))))
-          .children((r.windows || []).map((w, index) => this.window(w, r, data, t, index)))))
+        .children(reports.map((r, i) => this.report(r, data, t, i)))
         .when(Boolean(data?.error), el => el.child(div().text_color(t.blocked).child(data.error)))
         .children(failures.map((e, i) => div().id(`limits-error-${i}`).text_size(11).text_color(t.ansi3).child(`${e.agent}: ${e.message}`)))
         .when(skipped.length > 0, el => el.child(div().text_size(10.5).text_color(t.dim).child(`Not available: ${skipped.map(e => e.agent).join(", ")}`))))

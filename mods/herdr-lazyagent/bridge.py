@@ -36,6 +36,7 @@ from typing import Any
 MAX_OUTPUT = 512 * 1024
 MAX_REPORTS = 32
 MAX_WINDOWS = 16
+MAX_EXTRAS = 16
 MAX_ERRORS = 16
 LIMITS_TIMEOUT = 60
 STATE_VERSION = 1
@@ -182,6 +183,8 @@ def sanitize_window(raw: Any) -> dict[str, Any] | None:
         return None
     return {
         "label": as_text(raw.get("label"), 64) or "window",
+        "scope": as_text(raw.get("scope"), 120),
+        "detail": as_text(raw.get("detail"), 600),
         "window_minutes": int(max(0.0, as_number(raw.get("window_minutes")))),
         "used_percent": max(0.0, as_number(raw.get("used_percent"))),
         "expected_percent": max(0.0, as_number(raw.get("expected_percent"))),
@@ -192,6 +195,44 @@ def sanitize_window(raw: Any) -> dict[str, Any] | None:
         "resets_at": as_text(raw.get("resets_at"), 64),
         "reset_in_seconds": int(max(0.0, as_number(raw.get("reset_in_seconds")))),
         "reset_relative": as_text(raw.get("reset_relative"), 32),
+    }
+
+
+def sanitize_reset(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    return {
+        "label": as_text(raw.get("label"), 120) or "Limit reset",
+        "left": int(max(0.0, as_number(raw.get("left")))),
+        "total": int(max(0.0, as_number(raw.get("total")))),
+        "usable": raw.get("usable") is True,
+        "status": as_text(raw.get("status"), 240),
+        "expires_at": as_text(raw.get("expires_at"), 64),
+        "expires_in_seconds": int(max(0.0, as_number(raw.get("expires_in_seconds")))),
+        "next_available_at": as_text(raw.get("next_available_at"), 64),
+        "next_available_in_seconds": int(max(0.0, as_number(raw.get("next_available_in_seconds")))),
+        "text": as_text(raw.get("text"), 600),
+    }
+
+
+def sanitize_credit(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    def amount(key: str) -> float | None:
+        value = raw.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return float(value) if math.isfinite(float(value)) else None
+
+    return {
+        "label": as_text(raw.get("label"), 120) or "Credits",
+        "unit": as_text(raw.get("unit"), 32),
+        "enabled": raw.get("enabled") is True,
+        "balance": amount("balance"),
+        "used": amount("used"),
+        "limit": amount("limit"),
+        "status": as_text(raw.get("status"), 240),
+        "text": as_text(raw.get("text"), 600),
     }
 
 
@@ -211,13 +252,7 @@ def sanitize_report(raw: Any) -> dict[str, Any] | None:
     (`fetched_at`, `stale`) so cached reports round-trip through here."""
     if not isinstance(raw, dict):
         return None
-    windows = []
-    for item in raw.get("windows") or []:
-        window = sanitize_window(item)
-        if window:
-            windows.append(window)
-        if len(windows) >= MAX_WINDOWS:
-            break
+    windows = sanitize_list(raw.get("windows"), sanitize_window, MAX_WINDOWS)
     summary = raw.get("summary") if isinstance(raw.get("summary"), dict) else {}
     agent = as_text(raw.get("agent"), 32)
     provider = as_text(raw.get("provider"), 64)
@@ -228,6 +263,8 @@ def sanitize_report(raw: Any) -> dict[str, Any] | None:
         "source": as_text(raw.get("source"), 400),
         "note": as_text(raw.get("note"), 600),
         "windows": windows,
+        "resets": sanitize_list(raw.get("resets"), sanitize_reset, MAX_EXTRAS),
+        "credits": sanitize_list(raw.get("credits"), sanitize_credit, MAX_EXTRAS),
         "summary": {
             "five_hour": sanitize_cell(summary.get("five_hour")),
             "week_global": sanitize_cell(summary.get("week_global")),
@@ -317,12 +354,23 @@ def load_state() -> dict[str, Any]:
         return {}
     if not isinstance(data, dict) or data.get("version") != STATE_VERSION:
         return {}
+    reports = data.get("reports")
+    has_details = isinstance(reports, list) and bool(reports) and all(
+        isinstance(report, dict)
+        and isinstance(report.get("resets"), list)
+        and isinstance(report.get("credits"), list)
+        and isinstance(report.get("windows"), list)
+        and all(isinstance(window, dict) and "scope" in window and "detail" in window
+                for window in report["windows"])
+        for report in reports
+    )
     return {
         "agent": as_enum(data.get("agent"), AGENTS, ""),
         "fetchedAt": max(0.0, as_number(data.get("fetchedAt"))),
         "path": as_text(data.get("path"), 400),
         "versionText": as_text(data.get("versionText"), 120),
         "generatedAt": as_text(data.get("generatedAt"), 64),
+        "hasDetails": has_details,
         "reports": sanitize_list(data.get("reports"), sanitize_report, MAX_REPORTS),
         "errors": sanitize_list(data.get("errors"), sanitize_error, MAX_ERRORS),
         "backoff": sanitize_backoff(data.get("backoff")),
